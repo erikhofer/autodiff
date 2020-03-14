@@ -1,0 +1,70 @@
+
+project.ext {
+  autodiff = [
+    changeLogMaster: "src/main/resources/db/changelog/db.changelog-master.yaml",
+    changeLogDiff  : "src/main/resources/db/changelog/db.changelog-diff.yaml",
+    basePackge     : "com.example.entity"
+  ]
+}
+
+liquibase {
+  activities {
+    main {
+      url 'jdbc:postgresql://localhost:5555/postgres'
+      username 'postgres'
+      password 'postgres'
+      driver 'org.postgresql.Driver'
+      referenceDriver 'liquibase.ext.hibernate.database.connection.HibernateDriver'
+    }
+  }
+}
+
+task autodiffStartDatabase(type: Exec) {
+  commandLine 'docker', 'run', '--name', 'autodiff-database', '-e', 'POSTGRES_PASSWORD=postgres', '-p', '5555:5432', '-d', 'postgres'
+}
+
+task autodiffStopDatabase(type: Exec) {
+  commandLine 'docker', 'rm', '--volumes', '--force', 'autodiff-database'
+}
+
+task autodiffApplyCurrentSchema {
+  dependsOn compileJava
+  dependsOn autodiffStartDatabase
+  tasks.findByName('autodiffStartDatabase').mustRunAfter 'compileJava' // just in case it fails
+  doFirst {
+    liquibase {
+      activities {
+        main {
+          changeLogFile project.autodiff.changeLogMaster
+        }
+      }
+    }
+  }
+  finalizedBy liquibaseUpdate
+}
+
+task autodiffGenerateDiff {
+  dependsOn autodiffApplyCurrentSchema
+  doFirst {
+    liquibase {
+      activities {
+        main {
+          changeLogFile project.autodiff.changeLogDiff
+          referenceUrl "hibernate:spring:${project.autodiff.basePackage}?dialect=org.hibernate.dialect.PostgreSQLDialect&" +
+            'hibernate.physical_naming_strategy=org.springframework.boot.orm.jpa.hibernate.SpringPhysicalNamingStrategy&' +
+            'hibernate.implicit_naming_strategy=org.springframework.boot.orm.jpa.hibernate.SpringImplicitNamingStrategy'
+        }
+      }
+    }
+  }
+  finalizedBy liquibaseDiffChangeLog
+}
+
+task autodiff {
+  dependsOn autodiffGenerateDiff
+  dependsOn autodiffStopDatabase
+  tasks.findByName('autodiffStopDatabase').mustRunAfter 'autodiffGenerateDiff'
+  doLast {
+    println "Changelog written to ${project.autodiff.changeLogDiff}"
+  }
+}
