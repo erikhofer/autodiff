@@ -1,6 +1,6 @@
 # autodiff
 
-This is a utility Gradle script for generating Liquibase changelogs for your Hibernate JPA projects. It will
+This is a utility Gradle script for generating Liquibase changelogs for your Spring Boot / Hibernate JPA projects. It will
 
 - Spin up a database Docker container
 - Apply your current database schema
