@@ -3,7 +3,7 @@ project.ext {
   autodiff = [
     changeLogMaster: "src/main/resources/db/changelog/db.changelog-master.yaml",
     changeLogDiff  : "src/main/resources/db/changelog/db.changelog-diff.yaml",
-    basePackge     : "com.example.entity"
+    basePackage     : "com.example.entity"
   ]
 }
 
