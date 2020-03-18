@@ -20,16 +20,34 @@ liquibase {
 }
 
 task autodiffStartDatabase(type: Exec) {
+  group = 'autodiff'
   commandLine 'docker', 'run', '--name', 'autodiff-database', '-e', 'POSTGRES_PASSWORD=postgres', '-p', '5555:5432', '-d', 'postgres'
 }
 
 task autodiffStopDatabase(type: Exec) {
+  group = 'autodiff'
   commandLine 'docker', 'rm', '--volumes', '--force', 'autodiff-database'
 }
 
+task autodiffWaitForDatabase(){
+  group = 'autodiff'
+  mustRunAfter autodiffStartDatabase
+  doFirst{
+    println "Waiting for Database to be available"
+    ant.waitfor(
+      maxwait: "10", maxwaitunit: "second",
+      checkevery: "500", checkeveryunit: "millisecond"
+    ){
+      socket(server:"localhost", port:"5555")
+    }
+  }
+}
+
 task autodiffApplyCurrentSchema {
+  group = 'autodiff'
   dependsOn compileJava
   dependsOn autodiffStartDatabase
+  dependsOn autodiffWaitForDatabase
   tasks.findByName('autodiffStartDatabase').mustRunAfter 'compileJava' // just in case it fails
   doFirst {
     liquibase {
@@ -44,6 +62,7 @@ task autodiffApplyCurrentSchema {
 }
 
 task autodiffGenerateDiff {
+  group = 'autodiff'
   dependsOn autodiffApplyCurrentSchema
   doFirst {
     liquibase {
@@ -61,6 +80,7 @@ task autodiffGenerateDiff {
 }
 
 task autodiff {
+  group = 'autodiff'
   dependsOn autodiffGenerateDiff
   dependsOn autodiffStopDatabase
   tasks.findByName('autodiffStopDatabase').mustRunAfter 'autodiffGenerateDiff'
