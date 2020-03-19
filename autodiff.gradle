@@ -21,7 +21,7 @@ liquibase {
 
 task autodiffStartDatabase(type: Exec) {
   group = 'autodiff'
-  commandLine 'docker', 'run', '--name', 'autodiff-database', '-e', 'POSTGRES_PASSWORD=postgres', '-p', '5555:5432', '-d', 'postgres'
+  commandLine 'docker', 'run', '--name', 'autodiff-database', '-e', 'POSTGRES_PASSWORD=postgres', '-p', '127.0.0.1:5555:5432', '-d', 'postgres'
 }
 
 task autodiffStopDatabase(type: Exec) {
@@ -29,9 +29,10 @@ task autodiffStopDatabase(type: Exec) {
   commandLine 'docker', 'rm', '--volumes', '--force', 'autodiff-database'
 }
 
-task autodiffWaitForDatabase(){
+task autodiffWaitForDatabase(type: Exec){
   group = 'autodiff'
   mustRunAfter autodiffStartDatabase
+  commandLine 'docker', 'exec', 'autodiff-database', 'sh', '-c', 'until pg_isready; do sleep 1; done'
   doFirst{
     println "Waiting for Database to be available"
     ant.waitfor(
